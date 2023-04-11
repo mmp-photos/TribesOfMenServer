@@ -1,14 +1,20 @@
 const express = require('express');
 const User = require('../models/usersModel');
 const passport = require('passport');
-const authenticate = require('../authenticate.js')
+const cors = require('./cors.js');
 const router = express.Router();
+const LocalStrategy = require('passport-local');
+
+
+passport.use(new LocalStrategy(User.authenticate()));
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
+    const users = User.find()
     res.status(200);
-    res.json({Get: 'GET request was successfull'});
+    res.json({status: "Get request successful"});
 });
+
 
 router.post('/signup', (req, res) => {
     User.register(
@@ -30,11 +36,16 @@ router.post('/signup', (req, res) => {
     );
 });
 
-router.post('/login', passport.authenticate('local'), (req, res) => {
-    const token = authenticate.getToken({_id: req.user._id});
+router.post('/login', passport.authenticate('local'),  function(req, res) {
+	console.log(req.user)
+    res.statusCode = 200;
+    res.json({Success: "You have successfully logged in"})
+});
+
+router.post('/signin', passport.authenticate('local'), (req, res) => {
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.json({success: true, token: token, status: 'You are successfully logged in!'});
+    res.json({success: true, status: 'Registration Successful!'});
 });
 
 module.exports = router;
