@@ -2,6 +2,12 @@ import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import cors from 'cors';
+import { MongoClient, ServerApiVersion } from 'mongodb';
+import dotenv from 'dotenv';
+import classesRouter from './routes/classesRouter.js';
+import connectToDatabase from './data/database2.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,14 +20,12 @@ app.use(cors(corsOptions));
 app.use(express.static(join(__dirname, 'public')));
 
 
+app.use((req, res, next) => {
+    console.log(`${req.method} request for ${req.path}`);
+    next();
+});
 
-
-
-import { MongoClient, ServerApiVersion } from 'mongodb';
-
-const uri = "mongodb+srv://apiConnect:Elh06wDQiSUBLUf3@clustercore.rkcxmtz.mongodb.net/?retryWrites=true&w=majority&appName=ClusterCore";
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const uri = process.env.ATLAS_CONNECT;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -30,58 +34,42 @@ const client = new MongoClient(uri, {
   }
 });
 
-const run = async () => {
+app.use('/class', classesRouter);
+
+app.get('/muppet/', async (req, res) => {
+  console.log(`Request for muppets file`);
+  console.log(`It's time to light the lights!`);
   try {
-    // Connect the client to the server (optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+      const db = await connectToDatabase();
+      const muppetsCollection = db.collection('users');
+      const findUsername = "Matt";
+      const firstMuppet = await muppetsCollection.findOne({ username: findUsername });
+      res.status(200).json(firstMuppet);
+  } catch (error) {
+      console.error("Error fetching Muppet:", error);
+      res.status(500).json({ error: 'Failed to retrieve the first Muppet' });
   } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+      await client.close();
   }
-};
-
-run().catch(console.dir);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-app.use((req, res, next) => {
-    console.log(`${req.method} request for ${req.path}`);
-    next();
 });
 
-app.get('/test', (req, res) => {
-    console.log(`Request for test file`);
-    res.status(200).json({ message: 'successful request' }); // Use status 200 for success
-});
+
+
+// app.get('*', (req, res) => {
+//   res.status(404);
+//   console.log(`All route was requested`)
+//   if (req.accepts('html')) {
+//       res.sendFile(join(__dirname, 'views', '404.html'));
+//   } else if (req.accepts('json')) {
+//       res.json({ error: '404 - not found' });
+//   } else {
+//       res.type('txt').send('404 Not-Found');
+//   }
+// });
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-app.all('*', (req, res) => {
-    res.status(404);
-    if (req.accepts('html')) {
-        res.sendFile(join(__dirname, 'views', '404.html'));
-    } else if (req.accepts('json')) {
-        res.json({ error: '404 - not found' });
-    } else {
-        res.type('txt').send('404 Not-Found');
-    }
-});
 
 const PORT = process.env.PORT || 3500;
 app.listen(PORT, () => console.log('Listening on port', PORT));
